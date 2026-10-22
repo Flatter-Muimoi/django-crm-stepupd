@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os # os をインポート
 from dotenv import load_dotenv # dotenv をインポート
-
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,7 +33,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    'whitenoise.middleware.WhiteNoiseMiddleware', # ▼ここに追加（⼀番上付近）
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -86,6 +86,10 @@ DATABASES = {
     }
 }
 
+# もし環境変数 DATABASE_URL があれば（本番環境）、それを使う設定で上書きする
+db_from_env = dj_database_url.config(conn_max_age=600)
+DATABASES['default'].update(db_from_env)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -117,9 +121,27 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+# 1. 開発中に static フォルダに置いたファイルを集める場所
+STATICFILES_DIRS = [BASE_DIR / "static"]
+# (もし static フォルダを作っていない場合は、空リスト [] でもOK、またはフォルダを作成)
+# 2. 本番環境で、全アプリの静的ファイルを集約する場所
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# 3. WhiteNoiseが圧縮して配信するための設定
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# settings.py
+# ...（⼀番下でOK）
+# ログイン後にリダイレクトする先のURL名
+LOGIN_REDIRECT_URL = 'customer_list'
+# ログアウト後にリダイレクトする先のURL名
+LOGOUT_REDIRECT_URL = 'login' # ログアウトしたらログインページに⾶ばす
+
+# .envから読み込む（なければ False になる安全策）
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# 許可するドメイン。本番ではRenderのURLが⼊る。
+# '*' は全許可だが、今回は簡易的に設定（実務ではドメイン指定推奨）
+ALLOWED_HOSTS = ['*']
